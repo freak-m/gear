@@ -311,4 +311,26 @@ function loadImageFile(file) {
     loadImageFile(e.target.files[0]);
     e.target.value = '';
   });
+
+  // Sliders — each input event updates sliderValues and re-renders
+  const sliderDefs = [
+    { id: 'yaw',        key: 'yaw',        valId: 'yaw-val',        fmt: (v) => v + '°' },
+    { id: 'pitch',      key: 'pitch',      valId: 'pitch-val',      fmt: (v) => v + '°' },
+    { id: 'roll',       key: 'roll',       valId: 'roll-val',       fmt: (v) => v + '°' },
+    { id: 'fov',        key: 'fov',        valId: 'fov-val',        fmt: (v) => v + '°' },
+    { id: 'cx',         key: 'cx',         valId: 'cx-val',         fmt: (v) => parseFloat(v).toFixed(3) },
+    { id: 'cy',         key: 'cy',         valId: 'cy-val',         fmt: (v) => parseFloat(v).toFixed(3) },
+    { id: 'brightness', key: 'brightness', valId: 'brightness-val', fmt: (v) => parseFloat(v).toFixed(2) },
+    { id: 'exposure',   key: 'exposure',   valId: 'exposure-val',   fmt: (v) => parseFloat(v).toFixed(1) },
+  ];
+
+  sliderDefs.forEach(({ id, key, valId, fmt }) => {
+    const input   = document.getElementById(id);
+    const display = document.getElementById(valId);
+    input.addEventListener('input', () => {
+      sliderValues[key] = parseFloat(input.value);
+      display.textContent = fmt(input.value);
+      render();
+    });
+  });
 })();
