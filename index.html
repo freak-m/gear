@@ -13,10 +13,6 @@
   <link rel="apple-touch-icon" href="icons/icon-192.png">
 </head>
 <body>
-  <header>
-    <h1>Gear 360 Converter</h1>
-  </header>
-
   <main>
     <div id="drop-zone" role="button" tabindex="0"
          aria-label="Drop zone for Gear 360 JPG files">
@@ -63,6 +59,12 @@
         <label>Y Offset <span id="cy-val">0.000</span>
           <input type="range" id="cy" min="-0.1" max="0.1" value="0" step="0.001">
         </label>
+        <label>Distortion k1 <span id="k1-val">0.000</span>
+          <input type="range" id="k1" min="-1" max="1" value="0" step="0.01">
+        </label>
+        <label>Distortion k2 <span id="k2-val">0.000</span>
+          <input type="range" id="k2" min="-0.5" max="0.5" value="0" step="0.005">
+        </label>
       </section>
 
       <section class="control-group">
@@ -75,6 +77,10 @@
         </label>
       </section>
 
+      <div class="action-row">
+        <button id="change-photo-btn">&#8635; Change Photo</button>
+        <button id="reset-btn">&#8634; Reset Settings</button>
+      </div>
       <button id="download-btn">&#8595; Download Full-Res JPG</button>
     </div>
   </main>

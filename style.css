@@ -24,17 +24,6 @@ html, body {
   line-height: 1.5;
 }
 
-header {
-  padding: 12px 16px;
-  border-bottom: 1px solid var(--border);
-}
-
-header h1 {
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--accent);
-}
-
 main {
   display: flex;
   flex-direction: column;
@@ -195,6 +184,28 @@ main {
 #download-btn:disabled {
   opacity: 0.4;
   cursor: not-allowed;
+}
+
+.action-row {
+  display: flex;
+  gap: 8px;
+}
+
+.action-row button {
+  flex: 1;
+  padding: 8px;
+  background: transparent;
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: color 0.2s, border-color 0.2s;
+}
+
+.action-row button:hover {
+  color: var(--text);
+  border-color: var(--accent);
 }
 
 #toast {

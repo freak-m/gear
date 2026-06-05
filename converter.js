@@ -23,6 +23,8 @@ uniform float u_cx;
 uniform float u_cy;
 uniform float u_brightness;
 uniform float u_exposure;
+uniform float u_k1;
+uniform float u_k2;
 
 varying vec2 v_texcoord;
 
@@ -70,6 +72,10 @@ void main() {
   // Normalised radius: 0 = optical center, 1 = edge at FOV/2
   float r = theta / (u_fov * 0.5);
 
+  // Radial distortion correction: negative k1 = barrel, positive = pincushion
+  float r2 = r * r;
+  r = r * (1.0 + u_k1 * r2 + u_k2 * r2 * r2);
+
   // Outside lens coverage -> black border
   if (r > 1.0) {
     gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);
@@ -105,12 +111,15 @@ let imageLoaded = false;
 
 const uniforms = {};
 
-const sliderValues = {
+const DEFAULTS = {
   yaw: 0, pitch: 0, roll: 0,
   fov: 195,
   cx: 0, cy: 0,
   brightness: 0, exposure: 0,
+  k1: 0, k2: 0,
 };
+
+const sliderValues = { ...DEFAULTS };
 
 // ─── WebGL Helpers ────────────────────────────────────────────────────────────
 
@@ -160,6 +169,7 @@ function cacheUniforms(ctx, prog) {
     'u_yaw', 'u_pitch', 'u_roll',
     'u_fov', 'u_cx', 'u_cy',
     'u_brightness', 'u_exposure',
+    'u_k1', 'u_k2',
   ].forEach((n) => { uniforms[n] = ctx.getUniformLocation(prog, n); });
 }
 
@@ -202,6 +212,8 @@ function render() {
   gl.uniform1f(uniforms['u_cy'],         sliderValues.cy);
   gl.uniform1f(uniforms['u_brightness'], sliderValues.brightness);
   gl.uniform1f(uniforms['u_exposure'],   sliderValues.exposure);
+  gl.uniform1f(uniforms['u_k1'],         sliderValues.k1);
+  gl.uniform1f(uniforms['u_k2'],         sliderValues.k2);
 
   gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
 }
@@ -318,6 +330,8 @@ function downloadFullRes() {
     offGL.uniform1f(uLoc('u_cy'),         sliderValues.cy);
     offGL.uniform1f(uLoc('u_brightness'), sliderValues.brightness);
     offGL.uniform1f(uLoc('u_exposure'),   sliderValues.exposure);
+    offGL.uniform1f(uLoc('u_k1'),         sliderValues.k1);
+    offGL.uniform1f(uLoc('u_k2'),         sliderValues.k2);
 
     offGL.viewport(0, 0, targetW, targetH);
     offGL.clear(offGL.COLOR_BUFFER_BIT);
@@ -402,6 +416,8 @@ function downloadFullRes() {
     { id: 'cy',         key: 'cy',         valId: 'cy-val',         fmt: (v) => parseFloat(v).toFixed(3) },
     { id: 'brightness', key: 'brightness', valId: 'brightness-val', fmt: (v) => parseFloat(v).toFixed(2) },
     { id: 'exposure',   key: 'exposure',   valId: 'exposure-val',   fmt: (v) => parseFloat(v).toFixed(1) },
+    { id: 'k1',         key: 'k1',         valId: 'k1-val',         fmt: (v) => parseFloat(v).toFixed(3) },
+    { id: 'k2',         key: 'k2',         valId: 'k2-val',         fmt: (v) => parseFloat(v).toFixed(3) },
   ];
 
   sliderDefs.forEach(({ id, key, valId, fmt }) => {
@@ -415,6 +431,19 @@ function downloadFullRes() {
   });
 
   document.getElementById('download-btn').addEventListener('click', downloadFullRes);
+
+  document.getElementById('reset-btn').addEventListener('click', () => {
+    Object.assign(sliderValues, DEFAULTS);
+    sliderDefs.forEach(({ id, key, valId, fmt }) => {
+      document.getElementById(id).value = DEFAULTS[key];
+      document.getElementById(valId).textContent = fmt(String(DEFAULTS[key]));
+    });
+    render();
+  });
+
+  document.getElementById('change-photo-btn').addEventListener('click', () => {
+    document.getElementById('file-input').click();
+  });
 })();
 
 // ─── PWA ─────────────────────────────────────────────────────────────────────
