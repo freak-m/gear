@@ -25,6 +25,8 @@ uniform float u_brightness;
 uniform float u_exposure;
 uniform float u_k1;
 uniform float u_k2;
+uniform float u_yaw_back;
+uniform float u_seam_blend;
 
 varying vec2 v_texcoord;
 
@@ -45,55 +47,60 @@ mat3 rotZ(float a) {
   return mat3(c, s, 0.0,  -s, c, 0.0,  0.0, 0.0, 1.0);
 }
 
+// Project direction d onto one fisheye lens. Returns UV, or vec2(-1) if outside coverage.
+// halfBase: 0.0 = front (left half), 0.5 = back (right half)
+vec2 projectLens(vec3 d, float halfBase) {
+  float theta = acos(clamp(d.z, -1.0, 1.0));
+  float phi   = atan(d.y, d.x);
+  float r     = theta / (u_fov * 0.5);
+  float r2    = r * r;
+  r = r * (1.0 + u_k1 * r2 + u_k2 * r2 * r2);
+  if (r > 1.0) return vec2(-1.0);
+  float fx = r * cos(phi) * 0.5 + 0.5 + u_cx;
+  float fy = r * sin(phi) * 0.5 + 0.5 + u_cy;
+  float u_c = clamp(fx * 0.5 + halfBase, halfBase, halfBase + 0.5);
+  return vec2(u_c, fy);
+}
+
 void main() {
-  // Equirectangular output pixel -> spherical coords
   float lon = (v_texcoord.x - 0.5) * 2.0 * PI;
   float lat = (v_texcoord.y - 0.5) * PI;
 
-  // Spherical -> 3D unit vector (+X right, +Y up, +Z forward)
   vec3 dir = vec3(
     cos(lat) * sin(lon),
     sin(lat),
     cos(lat) * cos(lon)
   );
 
-  // Apply rotation: yaw (Y-axis) -> pitch (X-axis) -> roll (Z-axis)
   dir = rotY(u_yaw) * rotX(u_pitch) * rotZ(u_roll) * dir;
 
-  // SM-C200: front hemisphere (z >= 0) -> left input half
-  //          back  hemisphere (z <  0) -> right input half
-  bool isFront = dir.z >= 0.0;
-  vec3 d = isFront ? dir : vec3(-dir.x, dir.y, -dir.z);
+  // Front lens: looking in +Z direction
+  vec2 uv_f = projectLens(dir, 0.0);
 
-  // Equidistant fisheye projection
-  float theta = acos(clamp(d.z, -1.0, 1.0));
-  float phi   = atan(d.y, d.x);
+  // Back lens: flip hemisphere + independent yaw for seam alignment
+  vec3 d_back = rotY(u_yaw_back) * vec3(-dir.x, dir.y, -dir.z);
+  vec2 uv_b   = projectLens(d_back, 0.5);
 
-  // Normalised radius: 0 = optical center, 1 = edge at FOV/2
-  float r = theta / (u_fov * 0.5);
+  bool valid_f = uv_f.x >= 0.0;
+  bool valid_b = uv_b.x >= 0.0;
 
-  // Radial distortion correction: negative k1 = barrel, positive = pincushion
-  float r2 = r * r;
-  r = r * (1.0 + u_k1 * r2 + u_k2 * r2 * r2);
-
-  // Outside lens coverage -> black border
-  if (r > 1.0) {
+  if (!valid_f && !valid_b) {
     gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);
     return;
   }
 
-  // UV within fisheye circle, centered at 0.5 + user offset
-  float fx = r * cos(phi) * 0.5 + 0.5 + u_cx;
-  float fy = r * sin(phi) * 0.5 + 0.5 + u_cy;
+  vec4 color;
+  if (!valid_f) {
+    color = texture2D(u_texture, uv_b);
+  } else if (!valid_b) {
+    color = texture2D(u_texture, uv_f);
+  } else {
+    // Blend both lenses near the seam (dir.z ≈ 0)
+    float hw = max(u_seam_blend, 0.001);
+    float t  = smoothstep(-hw, hw, dir.z);
+    color = mix(texture2D(u_texture, uv_b), texture2D(u_texture, uv_f), t);
+  }
 
-  // Map to left (front) or right (back) half of input texture
-  float u_coord = isFront
-    ? clamp(fx * 0.5, 0.0, 0.5)
-    : clamp(fx * 0.5 + 0.5, 0.5, 1.0);
-
-  vec4 color = texture2D(u_texture, vec2(u_coord, fy));
-
-  // Image corrections: exposure (EV stops) then brightness offset
   color.rgb *= pow(2.0, u_exposure);
   color.rgb  = clamp(color.rgb + u_brightness, 0.0, 1.0);
 
@@ -117,6 +124,7 @@ const DEFAULTS = {
   cx: 0, cy: 0,
   brightness: 0, exposure: 0,
   k1: 0, k2: 0,
+  yaw_back: 0, seam_blend: 0,
 };
 
 const sliderValues = { ...DEFAULTS };
@@ -170,6 +178,7 @@ function cacheUniforms(ctx, prog) {
     'u_fov', 'u_cx', 'u_cy',
     'u_brightness', 'u_exposure',
     'u_k1', 'u_k2',
+    'u_yaw_back', 'u_seam_blend',
   ].forEach((n) => { uniforms[n] = ctx.getUniformLocation(prog, n); });
 }
 
@@ -214,6 +223,8 @@ function render() {
   gl.uniform1f(uniforms['u_exposure'],   sliderValues.exposure);
   gl.uniform1f(uniforms['u_k1'],         sliderValues.k1);
   gl.uniform1f(uniforms['u_k2'],         sliderValues.k2);
+  gl.uniform1f(uniforms['u_yaw_back'],   sliderValues.yaw_back   * Math.PI / 180);
+  gl.uniform1f(uniforms['u_seam_blend'], sliderValues.seam_blend);
 
   gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
 }
@@ -332,6 +343,8 @@ function downloadFullRes() {
     offGL.uniform1f(uLoc('u_exposure'),   sliderValues.exposure);
     offGL.uniform1f(uLoc('u_k1'),         sliderValues.k1);
     offGL.uniform1f(uLoc('u_k2'),         sliderValues.k2);
+    offGL.uniform1f(uLoc('u_yaw_back'),   sliderValues.yaw_back   * Math.PI / 180);
+    offGL.uniform1f(uLoc('u_seam_blend'), sliderValues.seam_blend);
 
     offGL.viewport(0, 0, targetW, targetH);
     offGL.clear(offGL.COLOR_BUFFER_BIT);
@@ -418,6 +431,8 @@ function downloadFullRes() {
     { id: 'exposure',   key: 'exposure',   valId: 'exposure-val',   fmt: (v) => parseFloat(v).toFixed(1) },
     { id: 'k1',         key: 'k1',         valId: 'k1-val',         fmt: (v) => parseFloat(v).toFixed(3) },
     { id: 'k2',         key: 'k2',         valId: 'k2-val',         fmt: (v) => parseFloat(v).toFixed(3) },
+    { id: 'yaw_back',   key: 'yaw_back',   valId: 'yaw-back-val',  fmt: (v) => v + '°' },
+    { id: 'seam_blend', key: 'seam_blend', valId: 'seam-blend-val', fmt: (v) => parseFloat(v).toFixed(3) },
   ];
 
   sliderDefs.forEach(({ id, key, valId, fmt }) => {
