@@ -11,13 +11,85 @@ void main() {
 }
 `;
 
-// Passthrough — replaced by fisheye shader in Task 5
 const FRAG_SRC = `
 precision highp float;
+
 uniform sampler2D u_texture;
+uniform float u_yaw;
+uniform float u_pitch;
+uniform float u_roll;
+uniform float u_fov;
+uniform float u_cx;
+uniform float u_cy;
+uniform float u_brightness;
+uniform float u_exposure;
+
 varying vec2 v_texcoord;
+
+#define PI 3.14159265358979323846
+
+mat3 rotY(float a) {
+  float c = cos(a), s = sin(a);
+  return mat3(c, 0.0, s,  0.0, 1.0, 0.0,  -s, 0.0, c);
+}
+
+mat3 rotX(float a) {
+  float c = cos(a), s = sin(a);
+  return mat3(1.0, 0.0, 0.0,  0.0, c, -s,  0.0, s, c);
+}
+
+mat3 rotZ(float a) {
+  float c = cos(a), s = sin(a);
+  return mat3(c, -s, 0.0,  s, c, 0.0,  0.0, 0.0, 1.0);
+}
+
 void main() {
-  gl_FragColor = texture2D(u_texture, v_texcoord);
+  // Equirectangular output pixel -> spherical coords
+  float lon = (v_texcoord.x - 0.5) * 2.0 * PI;
+  float lat = (v_texcoord.y - 0.5) * PI;
+
+  // Spherical -> 3D unit vector (+X right, +Y up, +Z forward)
+  vec3 dir = vec3(
+    cos(lat) * sin(lon),
+    sin(lat),
+    cos(lat) * cos(lon)
+  );
+
+  // Apply rotation: yaw (Y-axis) -> pitch (X-axis) -> roll (Z-axis)
+  dir = rotY(u_yaw) * rotX(u_pitch) * rotZ(u_roll) * dir;
+
+  // SM-C200: front hemisphere (z >= 0) -> left input half
+  //          back  hemisphere (z <  0) -> right input half
+  bool isFront = dir.z >= 0.0;
+  vec3 d = isFront ? dir : vec3(-dir.x, dir.y, -dir.z);
+
+  // Equidistant fisheye projection
+  float theta = acos(clamp(d.z, -1.0, 1.0));
+  float phi   = atan(d.y, d.x);
+
+  // Normalised radius: 0 = optical center, 1 = edge at FOV/2
+  float r = theta / (u_fov * 0.5);
+
+  // Outside lens coverage -> black border
+  if (r > 1.0) {
+    gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);
+    return;
+  }
+
+  // UV within fisheye circle, centered at 0.5 + user offset
+  float fx = r * cos(phi) * 0.5 + 0.5 + u_cx;
+  float fy = r * sin(phi) * 0.5 + 0.5 + u_cy;
+
+  // Map to left (front) or right (back) half of input texture
+  float u_coord = isFront ? fx * 0.5 : fx * 0.5 + 0.5;
+
+  vec4 color = texture2D(u_texture, vec2(u_coord, fy));
+
+  // Image corrections: exposure (EV stops) then brightness offset
+  color.rgb *= pow(2.0, u_exposure);
+  color.rgb  = clamp(color.rgb + u_brightness, 0.0, 1.0);
+
+  gl_FragColor = color;
 }
 `;
 
