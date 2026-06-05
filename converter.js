@@ -264,6 +264,75 @@ function loadImageFile(file) {
   reader.readAsDataURL(file);
 }
 
+// ─── Full-Resolution Download ─────────────────────────────────────────────────
+
+function downloadFullRes() {
+  if (!currentImage) return;
+
+  const btn = document.getElementById('download-btn');
+  btn.disabled = true;
+  btn.textContent = 'Rendering…';
+
+  // Defer so browser repaints the button before the blocking render
+  setTimeout(() => {
+    const offscreen = document.createElement('canvas');
+    const maxSize   = gl.getParameter(gl.MAX_TEXTURE_SIZE);
+    const targetW   = Math.min(7776, maxSize);
+    const targetH   = Math.round(targetW / 2);
+    offscreen.width  = targetW;
+    offscreen.height = targetH;
+
+    const offGL = offscreen.getContext('webgl') ||
+                  offscreen.getContext('experimental-webgl');
+    if (!offGL) {
+      showToast('Offscreen WebGL unavailable.', true);
+      btn.disabled = false;
+      btn.textContent = '↓ Download Full-Res JPG';
+      return;
+    }
+
+    const offProg = createProgramForContext(offGL);
+    offGL.useProgram(offProg);
+    setupQuad(offGL, offProg);
+    offGL.clearColor(0, 0, 0, 1);
+
+    const offTex = offGL.createTexture();
+    offGL.bindTexture(offGL.TEXTURE_2D, offTex);
+    offGL.texParameteri(offGL.TEXTURE_2D, offGL.TEXTURE_WRAP_S, offGL.CLAMP_TO_EDGE);
+    offGL.texParameteri(offGL.TEXTURE_2D, offGL.TEXTURE_WRAP_T, offGL.CLAMP_TO_EDGE);
+    offGL.texParameteri(offGL.TEXTURE_2D, offGL.TEXTURE_MIN_FILTER, offGL.LINEAR);
+    offGL.texParameteri(offGL.TEXTURE_2D, offGL.TEXTURE_MAG_FILTER, offGL.LINEAR);
+    offGL.texImage2D(offGL.TEXTURE_2D, 0, offGL.RGB, offGL.RGB,
+                     offGL.UNSIGNED_BYTE, currentImage);
+
+    const uLoc = (name) => offGL.getUniformLocation(offProg, name);
+    offGL.uniform1i(uLoc('u_texture'), 0);
+    offGL.uniform1f(uLoc('u_yaw'),        sliderValues.yaw        * Math.PI / 180);
+    offGL.uniform1f(uLoc('u_pitch'),      sliderValues.pitch      * Math.PI / 180);
+    offGL.uniform1f(uLoc('u_roll'),       sliderValues.roll       * Math.PI / 180);
+    offGL.uniform1f(uLoc('u_fov'),        sliderValues.fov        * Math.PI / 180);
+    offGL.uniform1f(uLoc('u_cx'),         sliderValues.cx);
+    offGL.uniform1f(uLoc('u_cy'),         sliderValues.cy);
+    offGL.uniform1f(uLoc('u_brightness'), sliderValues.brightness);
+    offGL.uniform1f(uLoc('u_exposure'),   sliderValues.exposure);
+
+    offGL.viewport(0, 0, targetW, targetH);
+    offGL.clear(offGL.COLOR_BUFFER_BIT);
+    offGL.drawArrays(offGL.TRIANGLE_STRIP, 0, 4);
+
+    offscreen.toBlob((blob) => {
+      const url = URL.createObjectURL(blob);
+      const a   = document.createElement('a');
+      a.href     = url;
+      a.download = 'equirectangular.jpg';
+      a.click();
+      URL.revokeObjectURL(url);
+      btn.disabled = false;
+      btn.textContent = '↓ Download Full-Res JPG';
+    }, 'image/jpeg', 0.95);
+  }, 16);
+}
+
 // ─── UI Init ─────────────────────────────────────────────────────────────────
 
 (function init() {
@@ -333,4 +402,6 @@ function loadImageFile(file) {
       render();
     });
   });
+
+  document.getElementById('download-btn').addEventListener('click', downloadFullRes);
 })();
