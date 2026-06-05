@@ -69,6 +69,7 @@ main {
 }
 
 .browse-btn {
+  position: relative;
   display: inline-block;
   padding: 8px 20px;
   background: var(--accent);

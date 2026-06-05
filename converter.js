@@ -277,8 +277,8 @@ function downloadFullRes() {
   setTimeout(() => {
     const offscreen = document.createElement('canvas');
 
-    const offGL = offscreen.getContext('webgl') ||
-                  offscreen.getContext('experimental-webgl');
+    const offGL = offscreen.getContext('webgl', { preserveDrawingBuffer: true }) ||
+                  offscreen.getContext('experimental-webgl', { preserveDrawingBuffer: true });
     if (!offGL) {
       showToast('Offscreen WebGL unavailable.', true);
       btn.disabled = false;
@@ -334,7 +334,7 @@ function downloadFullRes() {
       a.href     = url;
       a.download = 'equirectangular.jpg';
       a.click();
-      URL.revokeObjectURL(url);
+      setTimeout(() => URL.revokeObjectURL(url), 100);
       btn.disabled = false;
       btn.textContent = '↓ Download Full-Res JPG';
       offGL.getExtension('WEBGL_lose_context')?.loseContext();
@@ -418,6 +418,6 @@ function downloadFullRes() {
 // ─── PWA ─────────────────────────────────────────────────────────────────────
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/service-worker.js');
+    navigator.serviceWorker.register('./service-worker.js');
   });
 }
