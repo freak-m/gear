@@ -276,11 +276,6 @@ function downloadFullRes() {
   // Defer so browser repaints the button before the blocking render
   setTimeout(() => {
     const offscreen = document.createElement('canvas');
-    const maxSize   = gl.getParameter(gl.MAX_TEXTURE_SIZE);
-    const targetW   = Math.min(7776, maxSize);
-    const targetH   = Math.round(targetW / 2);
-    offscreen.width  = targetW;
-    offscreen.height = targetH;
 
     const offGL = offscreen.getContext('webgl') ||
                   offscreen.getContext('experimental-webgl');
@@ -290,6 +285,12 @@ function downloadFullRes() {
       btn.textContent = '↓ Download Full-Res JPG';
       return;
     }
+
+    const maxSize   = offGL.getParameter(offGL.MAX_TEXTURE_SIZE);
+    const targetW   = Math.min(7776, maxSize);
+    const targetH   = Math.round(targetW / 2);
+    offscreen.width  = targetW;
+    offscreen.height = targetH;
 
     const offProg = createProgramForContext(offGL);
     offGL.useProgram(offProg);
@@ -321,6 +322,13 @@ function downloadFullRes() {
     offGL.drawArrays(offGL.TRIANGLE_STRIP, 0, 4);
 
     offscreen.toBlob((blob) => {
+      if (!blob) {
+        showToast('Failed to encode image.', true);
+        btn.disabled = false;
+        btn.textContent = '↓ Download Full-Res JPG';
+        offGL.getExtension('WEBGL_lose_context')?.loseContext();
+        return;
+      }
       const url = URL.createObjectURL(blob);
       const a   = document.createElement('a');
       a.href     = url;
@@ -329,6 +337,7 @@ function downloadFullRes() {
       URL.revokeObjectURL(url);
       btn.disabled = false;
       btn.textContent = '↓ Download Full-Res JPG';
+      offGL.getExtension('WEBGL_lose_context')?.loseContext();
     }, 'image/jpeg', 0.95);
   }, 16);
 }
