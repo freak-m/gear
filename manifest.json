@@ -2,7 +2,7 @@
   "name": "Gear 360 Converter",
   "short_name": "Gear360",
   "description": "Convert Samsung Gear 360 fisheye photos to equirectangular panoramas",
-  "start_url": "/",
+  "start_url": "./",
   "display": "standalone",
   "orientation": "any",
   "background_color": "#111111",

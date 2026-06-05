@@ -1,12 +1,12 @@
-const CACHE = 'gear360-v1';
+const CACHE = 'gear360-v2';
 const ASSETS = [
-  '/',
-  '/index.html',
-  '/style.css',
-  '/converter.js',
-  '/manifest.json',
-  '/icons/icon-192.png',
-  '/icons/icon-512.png',
+  './',
+  './index.html',
+  './style.css',
+  './converter.js',
+  './manifest.json',
+  './icons/icon-192.png',
+  './icons/icon-512.png',
 ];
 
 self.addEventListener('install', (e) => {
