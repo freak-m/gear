@@ -101,7 +101,6 @@ main {
   width: 100%;
   height: auto;
   max-height: 40vh;
-  object-fit: contain;
 }
 
 #controls {
@@ -150,11 +149,16 @@ main {
   height: 4px;
   background: var(--surface2);
   border-radius: 2px;
-  outline: none;
   cursor: pointer;
 }
 
+.control-group input[type="range"]:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
 .control-group input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
   appearance: none;
   width: 14px;
   height: 14px;
