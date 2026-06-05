@@ -228,6 +228,7 @@ function uploadTexture(img) {
     return false;
   }
   gl.bindTexture(gl.TEXTURE_2D, texture);
+  gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
   gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, img);
   imageLoaded = true;
   return true;
@@ -303,6 +304,7 @@ function downloadFullRes() {
     offGL.texParameteri(offGL.TEXTURE_2D, offGL.TEXTURE_WRAP_T, offGL.CLAMP_TO_EDGE);
     offGL.texParameteri(offGL.TEXTURE_2D, offGL.TEXTURE_MIN_FILTER, offGL.LINEAR);
     offGL.texParameteri(offGL.TEXTURE_2D, offGL.TEXTURE_MAG_FILTER, offGL.LINEAR);
+    offGL.pixelStorei(offGL.UNPACK_FLIP_Y_WEBGL, true);
     offGL.texImage2D(offGL.TEXTURE_2D, 0, offGL.RGB, offGL.RGB,
                      offGL.UNSIGNED_BYTE, currentImage);
 
