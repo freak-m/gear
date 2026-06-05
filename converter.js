@@ -234,7 +234,7 @@ function uploadTexture(img) {
 }
 
 function loadImageFile(file) {
-  if (!file || !file.type.startsWith('image/')) {
+  if (!file || file.type !== 'image/jpeg') {
     showToast('Drop a JPG image file.', true);
     return;
   }
@@ -269,7 +269,13 @@ function loadImageFile(file) {
 (function init() {
   const canvas = document.getElementById('preview-canvas');
 
-  if (!initWebGL(canvas)) {
+  let webglOk;
+  try {
+    webglOk = initWebGL(canvas);
+  } catch (err) {
+    webglOk = false;
+  }
+  if (!webglOk) {
     document.getElementById('drop-zone').innerHTML =
       '<p style="color:var(--danger)">WebGL not supported.<br>Try Chrome or Firefox.</p>';
     return;
@@ -281,8 +287,10 @@ function loadImageFile(file) {
     e.preventDefault();
     dropZone.classList.add('drag-over');
   });
-  dropZone.addEventListener('dragleave', () => {
-    dropZone.classList.remove('drag-over');
+  dropZone.addEventListener('dragleave', (e) => {
+    if (!dropZone.contains(e.relatedTarget)) {
+      dropZone.classList.remove('drag-over');
+    }
   });
   dropZone.addEventListener('drop', (e) => {
     e.preventDefault();
@@ -301,5 +309,6 @@ function loadImageFile(file) {
   // File picker
   document.getElementById('file-input').addEventListener('change', (e) => {
     loadImageFile(e.target.files[0]);
+    e.target.value = '';
   });
 })();
