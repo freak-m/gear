@@ -62,6 +62,10 @@ function createProgramForContext(ctx) {
   if (!ctx.getProgramParameter(prog, ctx.LINK_STATUS)) {
     throw new Error('Program link error: ' + ctx.getProgramInfoLog(prog));
   }
+  ctx.detachShader(prog, vert);
+  ctx.deleteShader(vert);
+  ctx.detachShader(prog, frag);
+  ctx.deleteShader(frag);
   return prog;
 }
 
@@ -71,6 +75,7 @@ function setupQuad(ctx, prog) {
   ctx.bindBuffer(ctx.ARRAY_BUFFER, buf);
   ctx.bufferData(ctx.ARRAY_BUFFER, verts, ctx.STATIC_DRAW);
   const loc = ctx.getAttribLocation(prog, 'a_position');
+  if (loc < 0) throw new Error('a_position attribute not found in shader');
   ctx.enableVertexAttribArray(loc);
   ctx.vertexAttribPointer(loc, 2, ctx.FLOAT, false, 0, 0);
 }
@@ -93,6 +98,7 @@ function initWebGL(canvas) {
   program = createProgramForContext(gl);
   gl.useProgram(program);
   setupQuad(gl, program);
+  gl.clearColor(0, 0, 0, 1);
   cacheUniforms(gl, program);
 
   texture = gl.createTexture();
