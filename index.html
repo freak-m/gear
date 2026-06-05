@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gear 360 Converter</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#111111">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+</head>
+<body>
+  <header>
+    <h1>Gear 360 Converter</h1>
+  </header>
+
+  <main>
+    <div id="drop-zone" role="button" tabindex="0"
+         aria-label="Drop zone for Gear 360 JPG files">
+      <svg width="48" height="48" viewBox="0 0 24 24" fill="none"
+           stroke="currentColor" stroke-width="1.5">
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+        <polyline points="17 8 12 3 7 8"/>
+        <line x1="12" y1="3" x2="12" y2="15"/>
+      </svg>
+      <p>Drop Gear 360 JPG here</p>
+      <label class="browse-btn">
+        Browse
+        <input type="file" id="file-input" accept="image/jpeg,image/jpg"
+               aria-label="Select Gear 360 JPG file">
+      </label>
+    </div>
+
+    <div id="preview-wrap" hidden>
+      <canvas id="preview-canvas" aria-label="Equirectangular preview"></canvas>
+    </div>
+
+    <div id="controls" hidden>
+      <section class="control-group">
+        <h2>Rotation</h2>
+        <label>Yaw <span id="yaw-val">0&deg;</span>
+          <input type="range" id="yaw" min="-180" max="180" value="0" step="0.5">
+        </label>
+        <label>Pitch <span id="pitch-val">0&deg;</span>
+          <input type="range" id="pitch" min="-90" max="90" value="0" step="0.5">
+        </label>
+        <label>Roll <span id="roll-val">0&deg;</span>
+          <input type="range" id="roll" min="-180" max="180" value="0" step="0.5">
+        </label>
+      </section>
+
+      <section class="control-group">
+        <h2>Lens</h2>
+        <label>FOV <span id="fov-val">195&deg;</span>
+          <input type="range" id="fov" min="160" max="220" value="195" step="0.5">
+        </label>
+        <label>X Offset <span id="cx-val">0.000</span>
+          <input type="range" id="cx" min="-0.1" max="0.1" value="0" step="0.001">
+        </label>
+        <label>Y Offset <span id="cy-val">0.000</span>
+          <input type="range" id="cy" min="-0.1" max="0.1" value="0" step="0.001">
+        </label>
+      </section>
+
+      <section class="control-group">
+        <h2>Image</h2>
+        <label>Brightness <span id="brightness-val">0.00</span>
+          <input type="range" id="brightness" min="-1" max="1" value="0" step="0.01">
+        </label>
+        <label>Exposure <span id="exposure-val">0.0</span>
+          <input type="range" id="exposure" min="-3" max="3" value="0" step="0.1">
+        </label>
+      </section>
+
+      <button id="download-btn">&#8595; Download Full-Res JPG</button>
+    </div>
+  </main>
+
+  <div id="toast" role="alert" aria-live="polite" hidden></div>
+
+  <script src="converter.js"></script>
+</body>
+</html>
