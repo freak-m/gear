@@ -205,3 +205,101 @@ function render() {
 
   gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
 }
+
+// ─── Toast ────────────────────────────────────────────────────────────────────
+
+let toastTimer = null;
+
+function showToast(msg, isError) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = isError ? 'error' : '';
+  el.hidden = false;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { el.hidden = true; }, 3500);
+}
+
+// ─── Texture ─────────────────────────────────────────────────────────────────
+
+function uploadTexture(img) {
+  const maxSize = gl.getParameter(gl.MAX_TEXTURE_SIZE);
+  if (img.naturalWidth > maxSize || img.naturalHeight > maxSize) {
+    showToast('Image too large for GPU. Max: ' + maxSize + 'px', true);
+    return false;
+  }
+  gl.bindTexture(gl.TEXTURE_2D, texture);
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, img);
+  imageLoaded = true;
+  return true;
+}
+
+function loadImageFile(file) {
+  if (!file || !file.type.startsWith('image/')) {
+    showToast('Drop a JPG image file.', true);
+    return;
+  }
+
+  const reader = new FileReader();
+  reader.onerror = () => showToast('Failed to read file.', true);
+  reader.onload = (e) => {
+    const img = new Image();
+    img.onerror = () => showToast('Failed to decode image.', true);
+    img.onload = () => {
+      const canvas = document.getElementById('preview-canvas');
+      const w = canvas.parentElement.clientWidth || window.innerWidth;
+      canvas.width  = w;
+      canvas.height = Math.round(w / 2);
+
+      currentImage = img;
+      if (!uploadTexture(img)) return;
+
+      document.getElementById('preview-wrap').hidden = false;
+      document.getElementById('drop-zone').hidden    = true;
+      document.getElementById('controls').hidden     = false;
+
+      render();
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+// ─── UI Init ─────────────────────────────────────────────────────────────────
+
+(function init() {
+  const canvas = document.getElementById('preview-canvas');
+
+  if (!initWebGL(canvas)) {
+    document.getElementById('drop-zone').innerHTML =
+      '<p style="color:var(--danger)">WebGL not supported.<br>Try Chrome or Firefox.</p>';
+    return;
+  }
+
+  // Drag and drop
+  const dropZone = document.getElementById('drop-zone');
+  dropZone.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    dropZone.classList.add('drag-over');
+  });
+  dropZone.addEventListener('dragleave', () => {
+    dropZone.classList.remove('drag-over');
+  });
+  dropZone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    dropZone.classList.remove('drag-over');
+    loadImageFile(e.dataTransfer.files[0]);
+  });
+
+  // Keyboard: Enter/Space on drop zone opens file picker (accessibility)
+  dropZone.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      document.getElementById('file-input').click();
+    }
+  });
+
+  // File picker
+  document.getElementById('file-input').addEventListener('change', (e) => {
+    loadImageFile(e.target.files[0]);
+  });
+})();
