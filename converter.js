@@ -30,17 +30,17 @@ varying vec2 v_texcoord;
 
 mat3 rotY(float a) {
   float c = cos(a), s = sin(a);
-  return mat3(c, 0.0, s,  0.0, 1.0, 0.0,  -s, 0.0, c);
+  return mat3(c, 0.0, -s,  0.0, 1.0, 0.0,  s, 0.0, c);
 }
 
 mat3 rotX(float a) {
   float c = cos(a), s = sin(a);
-  return mat3(1.0, 0.0, 0.0,  0.0, c, -s,  0.0, s, c);
+  return mat3(1.0, 0.0, 0.0,  0.0, c, s,  0.0, -s, c);
 }
 
 mat3 rotZ(float a) {
   float c = cos(a), s = sin(a);
-  return mat3(c, -s, 0.0,  s, c, 0.0,  0.0, 0.0, 1.0);
+  return mat3(c, s, 0.0,  -s, c, 0.0,  0.0, 0.0, 1.0);
 }
 
 void main() {
@@ -81,7 +81,9 @@ void main() {
   float fy = r * sin(phi) * 0.5 + 0.5 + u_cy;
 
   // Map to left (front) or right (back) half of input texture
-  float u_coord = isFront ? fx * 0.5 : fx * 0.5 + 0.5;
+  float u_coord = isFront
+    ? clamp(fx * 0.5, 0.0, 0.5)
+    : clamp(fx * 0.5 + 0.5, 0.5, 1.0);
 
   vec4 color = texture2D(u_texture, vec2(u_coord, fy));
 
